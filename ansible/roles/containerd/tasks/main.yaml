@@ -1,0 +1,39 @@
+- name: "apt: prereqs"
+  ansible.builtin.apt:
+    pkg:
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
+
+- name: "containerd: trust Docker Engine's repo"
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+    state: present
+
+- name: "containerd: add Docker Engine repos"
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+    state: present
+
+- name: "containerd: install containerd"
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: true
+  loop:
+  - docker-ce
+  - docker-ce-cli
+  - "containerd.io={{ containerd_version }}"
+  register: install
+
+- name: "containerd: replace config"
+  ansible.builtin.copy:
+    src: containerd-config.toml
+    dest: /etc/containerd/config.toml
+  register: replace_config
+
+- name: "containerd: restart"
+  ansible.builtin.systemd:
+    name: containerd
+    state: restarted
+  when: install.changed or replace_config.changed

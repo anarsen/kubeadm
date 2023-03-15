@@ -1,0 +1,19 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: {{ kube_apiserver_loadbalancer_fqdn }}:443
+    token: {{ kubeadm_token }}
+    caCertHashes:
+    - sha256:{{ kubeadm_ca_hash.stdout }}
+  tlsBootstrapToken: {{ kubeadm_token }}
+caCertPath: {{ kube_cert_dir }}/ca.crt
+nodeRegistration:
+  name: {{ kube_hostname }}
+  kubeletExtraArgs:
+    node-labels: topology.kubernetes.io/region={{ kube_node_region }},topology.kubernetes.io/zone={{ kube_node_zone }}
+---
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+maxPods: {{ kubelet_max_pods }}

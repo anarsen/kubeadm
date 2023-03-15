@@ -1,0 +1,69 @@
+---
+- name: network | load bridge/overlay modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+    persistent: present
+  loop:
+  - overlay
+  - br_netfilter
+
+- name: network | enable bridge IP forwarding
+  sysctl:
+    name: "{{ item }}"
+    value: 1
+    sysctl_set: true
+  loop:
+  - net.bridge.bridge-nf-call-iptables
+  - net.bridge.bridge-nf-call-ip6tables
+  - net.ipv4.ip_forward
+
+- name: network | reserve NodePort range
+  sysctl:
+    name: net.ipv4.ip_local_reserved_ports
+    value: "{{ kube_node_port_range }}"
+    sysctl_set: true
+
+- name: "kube: trust Kubernetes APT repo"
+  ansible.builtin.apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+  tags:
+  - kubelet
+  - kubeadm
+  - kubectl
+
+- name: "kube: add Kubernetes APT repo"
+  ansible.builtin.apt_repository:
+    repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+  tags:
+  - kubelet
+  - kubeadm
+  - kubectl
+
+- name: "kube: install kubelet, kubeadm, kubectl"
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: true
+  loop:
+  - "kubelet={{ kubernetes_version }}-{{ kubernetes_deb_patch }}"
+  - "kubeadm={{ kubernetes_version }}-{{ kubernetes_deb_patch }}"
+  - "kubectl={{ kubernetes_version }}-{{ kubernetes_deb_patch }}"
+  tags:
+  - kubelet
+  - kubeadm
+  - kubectl
+
+- name: "kube: pin kubelet, kubeadm, kubectl"
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+  - kubelet
+  - kubeadm
+  - kubectl
+  tags:
+  - kubelet
+  - kubeadm
+  - kubectl

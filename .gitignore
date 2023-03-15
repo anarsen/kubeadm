@@ -1,0 +1,9 @@
+.terraform/
+.terragrunt-cache/
+.vagrant/
+*.pem
+*.csr
+*.tfstate
+*.tfstate.backup
+**/dist
+**/.envrc

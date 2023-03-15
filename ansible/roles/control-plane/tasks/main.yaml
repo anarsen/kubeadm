@@ -1,0 +1,81 @@
+---
+- name: kubeadm | already run
+  stat:
+    path: /var/lib/kubelet/config.yaml
+  changed_when: false
+  register: kubeadm_already_run
+
+- name: kubeadm | kubernetes config dir exists
+  file:
+    state: directory
+    path: "{{ kube_config_dir }}"
+    mode: 640
+
+- name: kubeadm | generate kubeadm config
+  template:
+    src: kubeadm-config.yaml.j2
+    dest: "{{ kubeadm_config_path }}"
+    mode: "0640"
+
+- name: Define already-joined nodes to cluster and define first_kube_control_plane
+  import_tasks: define-first-master.yaml
+
+- name: kubeadm | certs to be renewed
+  command: >-
+    kubeadm
+    --config {{ kubeadm_config_path }}
+    certs check-expiration
+  register: certs_expiration_check
+  changed_when: "'NEED-RENEW' in certs_expiration_check.stdout"
+
+- name: kubeadm | regenerate apiserver cert 1/2
+  file:
+    state: absent
+    path: "{{ kube_cert_dir }}/{{ item }}"
+  loop:
+  - apiserver.crt
+  - apiserver.key
+  when:
+  - kubeadm_already_run.stat.exists
+  - certs_expiration_check.changed
+
+- name: kubeadm | regenerate apiserver cert 2/2
+  command: kubeadm init phase certs apiserver --config {{ kubeadm_config_path }}
+  when:
+  - kubeadm_already_run.stat.exists
+  - certs_expiration_check.changed
+
+- name: kubeadm | init first master node
+  command: >-
+    kubeadm init
+    --config={{ kubeadm_config_path }}
+    --upload-certs
+  register: kubeadm_init
+  retries: 3
+  until: kubeadm_init is succeeded
+  when: inventory_hostname == first_kube_control_plane and not kubeadm_already_run.stat.exists
+  failed_when: kubeadm_init.rc != 0
+
+- name: set kubeadm certificate key
+  set_fact:
+    kubeadm_certificate_key: "{{ item | regex_search('--certificate-key ([^ ]+)','\\1') | first }}"
+  with_items: "{{ hostvars[groups['kube_control_plane'][0]]['kubeadm_init'].stdout_lines | default([]) }}"
+  when:
+  - (item | trim) is match('.*--certificate-key.*')
+
+- name: Create kubeadm token for joining nodes with 24h expiration (default)
+  command: "kubeadm --kubeconfig {{ kube_config_dir }}/admin.conf token create"
+  changed_when: false
+  register: join_token
+  retries: 5
+  delay: 5
+  until: join_token is succeeded
+  delegate_to: "{{ first_kube_control_plane }}"
+
+- name: Set kubeadm_token
+  set_fact:
+    kubeadm_token: "{{ join_token.stdout }}"
+  when: join_token.stdout is defined
+
+- name: Join control plane nodes to cluster
+  import_tasks: kubeadm-secondary.yaml

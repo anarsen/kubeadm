@@ -1,0 +1,12 @@
+kubernetes_version: 1.26.3
+
+kube_apiserver_loadbalancer_fqdn: kube.platform.mvno.dk
+
+kube_pod_network: 10.100.0.0/18
+kube_service_network: 10.100.64.0/18
+
+# Up to 128 nodes and up to 110 pods per node:
+kube_node_network_prefix: 25
+kubelet_max_pods: 110
+
+auto_renew_certificates: true

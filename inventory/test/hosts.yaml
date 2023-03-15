@@ -1,0 +1,35 @@
+all:
+  children:
+    kube_control_plane:
+      hosts:
+        10.1.132.54:
+          hostname: control-plane-1
+          region: zealand
+          zone: hal-5
+        10.1.132.55:
+          hostname: control-plane-2
+          region: zealand
+          zone: hal-5
+        10.1.132.56:
+          hostname: control-plane-3
+          region: zealand
+          zone: hal-8
+    kube_workers:
+      hosts:
+        10.1.132.57:
+          hostname: worker-1
+          region: zealand
+          zone: hal-5
+        10.1.132.58:
+          hostname: worker-2
+          region: zealand
+          zone: hal-5
+        10.1.132.59:
+          hostname: worker-3
+          region: zealand
+          zone: hal-8
+
+    kubernetes:
+      children:
+        kube_control_plane:
+        kube_workers:

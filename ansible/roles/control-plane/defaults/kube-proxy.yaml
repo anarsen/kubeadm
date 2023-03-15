@@ -1,0 +1,17 @@
+### Conntrack
+# maxPerCore is the maximum number of NAT connections to track
+# per CPU core (0 to leave the limit as-is and ignore min).
+kube_proxy_conntrack_max_per_core: 32768
+
+# min is the minimum value of connect-tracking records to allocate,
+# regardless of conntrackMaxPerCore (set maxPerCore=0 to leave the limit as-is).
+kube_proxy_conntrack_min: 131072
+
+# tcpCloseWaitTimeout is how long an idle conntrack entry
+# in CLOSE_WAIT state will remain in the conntrack
+# table. (e.g. '60s'). Must be greater than 0 to set.
+kube_proxy_conntrack_tcp_close_wait_timeout: 1h0m0s
+
+# tcpEstablishedTimeout is how long an idle TCP connection will be kept open
+# (e.g. '2s').  Must be greater than 0 to set.
+kube_proxy_conntrack_tcp_established_timeout: 24h0m0s

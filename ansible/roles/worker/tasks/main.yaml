@@ -1,0 +1,82 @@
+- name: kubeadm | kubernetes config dir exists
+  file:
+    state: directory
+    path: "{{ kube_config_dir }}"
+    mode: 640
+
+- name: Check if kubelet.conf exists
+  stat:
+    path: "{{ kube_config_dir }}/kubelet.conf"
+    get_attributes: no
+    get_checksum: no
+    get_mime: no
+  register: kubelet_conf
+
+- name: Check if kubeadm CA cert is accessible
+  stat:
+    path: "{{ kube_cert_dir }}/ca.crt"
+    get_attributes: no
+    get_checksum: no
+    get_mime: no
+  register: kubeadm_ca_stat
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  run_once: true
+
+- name: Calculate kubeadm CA cert hash
+  shell: set -o pipefail && openssl x509 -pubkey -in {{ kube_cert_dir }}/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+  args:
+    executable: /bin/bash
+  register: kubeadm_ca_hash
+  when:
+    - kubeadm_ca_stat.stat is defined
+    - kubeadm_ca_stat.stat.exists
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  run_once: true
+  changed_when: false
+
+- name: Create kubeadm token for joining nodes with 24h expiration (default)
+  command: "kubeadm token create"
+  register: temp_token
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  when: kubeadm_token is not defined
+  changed_when: false
+
+- name: Set kubeadm_token to generated token
+  set_fact:
+    kubeadm_token: "{{ temp_token.stdout }}"
+  when: kubeadm_token is not defined
+
+- name: Create kubeadm join config
+  template:
+    src: "kubeadm-joinconfig.yaml.j2"
+    dest: "{{ kube_config_dir }}/kubeadm-joinconfig.yaml"
+    backup: yes
+    mode: 0640
+
+- name: Join to cluster if needed
+  when: not kubelet_conf.stat.exists
+  block:
+  - name: Join to cluster
+    command: >-
+      kubeadm join
+      --config {{ kube_config_dir }}/kubeadm-joinconfig.yaml
+      --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests
+    register: kubeadm_join
+    changed_when: kubeadm_join is success
+
+  rescue:
+  - name: Join to cluster with ignores
+    command: >-
+      kubeadm join
+      --config {{ kube_config_dir }}/kubeadm-joinconfig.yaml
+      --ignore-preflight-errors=all
+    register: kubeadm_join
+    changed_when: kubeadm_join is success
+
+  always:
+  - name: Display kubeadm join stderr if any
+    when: kubeadm_join is failed
+    debug:
+      msg: |
+        Joined with warnings
+        {{ kubeadm_join.stderr_lines }}

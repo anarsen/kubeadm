@@ -1,0 +1,11 @@
+kubelet_advertise_address: "{{ inventory_hostname }}"
+kubelet_bind_address: "{{ inventory_hostname }}"
+
+# OIDC
+kube_oidc_auth: false
+# kube_oidc_url: https://...
+# kube_oidc_client_id:
+# kube_oidc_client_secret:
+
+auto_renew_certificates: false
+auto_renew_certificates_systemd_calendar: "{{ 'Mon *-*-1,2,3,4,5,6,7 03:' ~ groups['kube_control_plane'].index(inventory_hostname) ~ '0:00' }}"

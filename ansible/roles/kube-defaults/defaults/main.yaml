@@ -1,0 +1,29 @@
+kubernetes_version: 1.26.3
+kubernetes_deb_patch: '00'
+cluster_name: cluster
+
+kube_config_dir: /etc/kubernetes
+kube_cert_dir: "{{ kube_config_dir }}/pki"
+
+kubeadm_config_path: "{{ kube_config_dir }}/kubeadm-config.yaml"
+
+kubectl_cmd: "kubectl --kubeconfig {{ kube_config_dir }}/admin.conf"
+
+# Networking
+kube_pod_network: "10.100.0.0/16"
+kube_service_network: "10.101.0.0/16"
+
+# Up to 128 nodes and up to 110 pods per node:
+kube_node_network_prefix: 25
+kubelet_max_pods: 110
+
+# A port range to reserve for services with NodePort visibility.
+# Inclusive at both ends of the range.
+kube_node_port_range: "30000-32767"
+
+is_kube_master: "{{ inventory_hostname in groups['kube_control_plane'] }}"
+
+kube_node_region: "{{ hostvars[inventory_hostname].region }}"
+kube_node_zone: "{{ hostvars[inventory_hostname].zone }}"
+
+kube_hostname: "{{ hostvars[inventory_hostname].hostname }}"

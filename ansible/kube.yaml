@@ -1,0 +1,33 @@
+---
+- name: Container Runtime, Kubernetes binaries, and configs
+  hosts: kube_control_plane:kube_workers
+  become: true
+  roles:
+  - role: containerd
+    tags: [container-runtime]
+
+  - role: kube-defaults
+    tags: [always]
+
+  - role: kube
+    tags: [kube]
+
+- name: Control Plane
+  hosts: kube_control_plane
+  become: true
+  roles:
+  - role: kube-defaults
+    tags: [always]
+
+  - role: control-plane
+    tags: [control-plane]
+
+- name: Workers
+  hosts: kube_workers
+  become: true
+  roles:
+  - role: kube-defaults
+    tags: [always]
+
+  - role: worker
+    tags: [workers]

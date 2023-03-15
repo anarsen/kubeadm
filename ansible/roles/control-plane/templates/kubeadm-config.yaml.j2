@@ -1,0 +1,75 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "{{ kube_apiserver_ip }}"
+  bindPort: {{ kube_apiserver_port }}
+nodeRegistration:
+  name: {{ kube_hostname }}
+  kubeletExtraArgs:
+    node-labels: topology.kubernetes.io/region={{ kube_node_region }},topology.kubernetes.io/zone={{ kube_node_zone }}
+{% if inventory_hostname in groups['kube_control_plane'] %}
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+{% else %}
+  taints: []
+{% endif %}
+  kubeletEtraArgs:
+    node-labels: "topology.kubernetes.io/region={{ kube_node_region }},topology.kubernetes.io/zone={{ kube_node_zone }}"
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+clusterName: {{ cluster_name }}
+kubernetesVersion: "v{{ kubernetes_version }}"
+controlPlaneEndpoint: "{{ kube_apiserver_loadbalancer_fqdn }}:443"
+networking:
+  podSubnet: "{{ kube_pod_network }}"
+  serviceSubnet: "{{ kube_service_network }}"
+
+certificatesDir: "{{ kube_cert_dir }}"
+
+apiServer:
+  extraArgs:
+    service-node-port-range: "{{ kube_node_port_range }}"
+    service-cluster-ip-range: "{{ kube_service_network }}"
+    event-ttl: {{ event_ttl_duration }}
+{% if kube_oidc_auth | default(false) %}
+    oidc-issuer-url: "{{ kube_oidc_url }}"
+    oidc-client-id: "{{ kube_oidc_client_id }}"
+    oidc-client-id: "{{ kube_oidc_client_id }}"
+{%   if kube_oidc_username_claim is defined %}
+    oidc-username-claim: "{{ kube_oidc_username_claim }}"
+{%   endif %}
+{%   if kube_oidc_groups_claim is defined %}
+    oidc-groups-claim: "{{ kube_oidc_groups_claim }}"
+{%   endif %}
+{%   if kube_oidc_username_prefix is defined %}
+    oidc-username-prefix: "{{ kube_oidc_username_prefix }}"
+{%   endif %}
+{%   if kube_oidc_groups_prefix is defined %}
+    oidc-groups-prefix: "{{ kube_oidc_groups_prefix }}"
+{%   endif %}
+{% endif %}
+
+controllerManager:
+  extraArgs:
+    cluster-cidr: "{{ kube_pod_network }}"
+    service-cluster-ip-range: "{{ kube_service_network }}"
+    node-cidr-mask-size: "{{ kube_node_network_prefix }}"
+    configure-cloud-routes: "false"
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+clusterCIDR: "{{ kube_pod_network }}"
+conntrack:
+  maxPerCore: {{ kube_proxy_conntrack_max_per_core }}
+  min: {{ kube_proxy_conntrack_min }}
+  tcpCloseWaitTimeout: {{ kube_proxy_conntrack_tcp_close_wait_timeout }}
+  tcpEstablishedTimeout: {{ kube_proxy_conntrack_tcp_established_timeout }}
+---
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+maxPods: {{ kubelet_max_pods }}

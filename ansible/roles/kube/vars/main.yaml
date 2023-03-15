@@ -1,0 +1,1 @@
+crictl_download_url: "{{ https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{ crictl_version }}/crictl-v{{ crictl_version }}-linux-amd64.tar.gz }}"
