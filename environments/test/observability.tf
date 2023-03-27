@@ -42,3 +42,10 @@ module "loki" {
   chart_version = "0.69.9"
   namespace     = "loki"
 }
+
+module "mimir" {
+  source = "./../../modules/k8s-mimir"
+
+  chart_version = "4.3.0"
+  namespace     = "mimir"
+}
