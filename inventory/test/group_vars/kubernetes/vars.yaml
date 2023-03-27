@@ -10,3 +10,12 @@ kube_node_network_prefix: 25
 kubelet_max_pods: 110
 
 auto_renew_certificates: true
+
+
+kube_oidc_auth: true
+kube_oidc_client_id: e37b352a-3c0c-42a5-8009-3d0f70043c8f
+kube_oidc_url: https://login.microsoftonline.com/a9ba49d1-8f45-47b2-9413-fcc8b0afc975/v2.0
+kube_oidc_username_claim: email
+kube_oidc_username_prefix: "oidc:"
+kube_oidc_groups_claim: roles
+kube_oidc_groups_prefix: "oidc:"

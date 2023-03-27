@@ -16,6 +16,7 @@
     src: kubeadm-config.yaml.j2
     dest: "{{ kubeadm_config_path }}"
     mode: "0640"
+  register: kubeadm_config_generate
 
 - name: Define already-joined nodes to cluster and define first_kube_control_plane
   import_tasks: define-first-master.yaml
@@ -44,6 +45,12 @@
   when:
   - kubeadm_already_run.stat.exists
   - certs_expiration_check.changed
+
+- name: kubeadm | regenerate kubelet manifest
+  command: kubeadm init phase control-plane apiserver --config {{ kubeadm_config_path }}
+  when:
+  - kubeadm_already_run.stat.exists
+  - kubeadm_config_generate.changed
 
 - name: kubeadm | init first master node
   command: >-
