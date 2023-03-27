@@ -16,8 +16,6 @@ nodeRegistration:
 {% else %}
   taints: []
 {% endif %}
-  kubeletEtraArgs:
-    node-labels: "topology.kubernetes.io/region={{ kube_node_region }},topology.kubernetes.io/zone={{ kube_node_zone }}"
 ---
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
