@@ -24,3 +24,21 @@ module "goldpinger" {
 
   chart_version = "5.6.0"
 }
+
+module "promtail" {
+  source = "./../../modules/k8s-promtail"
+
+  chart_version = "6.9.3"
+  namespace     = "promtail"
+
+  push_endpoints = [
+    module.loki.push_endpoint,
+  ]
+}
+
+module "loki" {
+  source = "./../../modules/k8s-loki"
+
+  chart_version = "0.69.9"
+  namespace     = "loki"
+}
